@@ -24,8 +24,11 @@ def display(path):
     cv2.destroyAllWindows()
 
 
-def noises(path):
-    img1 = cv2.imread(path)
+def noises(path, j=1):
+    if j == 0:
+        img1 = cv2.imread(path, 0)
+    else:
+        img1 = cv2.imread(path)
     return img1, random_noise(img1, mode='gaussian', seed=None, clip=True), \
            random_noise(img1, mode='s&p', seed=None, clip=True)
 
@@ -51,7 +54,7 @@ def display_noises(path):
 
 
 def HP_filter(path):
-    img1, gauss1, sp1 = noises(path)
+    img1, gauss1, sp1 = noises(path, 0)
     # A very simple and very narrow highpass filter
     kernel = np.array([[-1, -1, -1],
                        [-1, 8, -1],
@@ -160,6 +163,112 @@ def Amethyst_Contrast_Enhancer(path, alpha, beta):
     cv2.waitKey()
 
 
+def erosion_image(path):
+    input_image1 = cv2.imread(path[0], cv2.IMREAD_COLOR)
+    input_image2 = cv2.imread(path[1], cv2.IMREAD_COLOR)
+    kernel = np.ones((3, 3), np.uint8)  # set kernel as 3x3 matrix from numpy
+
+    # Create erosion and dilation image from the original image
+    erosion_image1 = cv2.erode(input_image1, kernel, iterations=1)
+    erosion_image2 = cv2.erode(input_image2, kernel, iterations=1)
+    images1 = [erosion_image1, erosion_image2]
+    images2 = [input_image1, input_image2]
+    titles1 = ["Erosion image 1", "Erosion image 2"]
+    titles2 = ["Original image 1", "Original image 2"]
+    fig = plt.figure()
+    title = "adding Erosion :"
+    fig.suptitle(title, fontsize=19, color='red')
+    for i in range(4):
+        plt.subplot(2, 2, i + 1)
+        if i < 2:
+            plt.imshow(images2[i])
+            plt.title(titles2[i % 2])
+        else:
+            plt.imshow(images1[i - 2])
+            plt.title(titles1[i % 2])
+        plt.xticks([])
+        plt.yticks([])
+    plt.show()
+
+
+def dilation_image(path):
+    input_image1 = cv2.imread(path[0], cv2.IMREAD_COLOR)
+    input_image2 = cv2.imread(path[1], cv2.IMREAD_COLOR)
+    kernel = np.ones((3, 3), np.uint8)  # set kernel as 3x3 matrix from numpy
+
+    # Create erosion and dilation image from the original image
+    erosion_image1 = cv2.dilate(input_image1, kernel, iterations=1)
+    erosion_image2 = cv2.dilate(input_image2, kernel, iterations=1)
+    images1 = [erosion_image1, erosion_image2]
+    images2 = [input_image1, input_image2]
+    titles1 = ["Dilate image 1", "Dilate image 2"]
+    titles2 = ["Original image 1", "Original image 2"]
+    fig = plt.figure()
+    title = "Adding dilatation :"
+    fig.suptitle(title, fontsize=19, color='red')
+    for i in range(4):
+        plt.subplot(2, 2, i + 1)
+        if i < 2:
+            plt.imshow(images2[i])
+            plt.title(titles2[i % 2])
+        else:
+            plt.imshow(images1[i - 2])
+            plt.title(titles1[i % 2])
+        plt.xticks([])
+        plt.yticks([])
+    plt.show()
+
+
+def fft2(path, display_image=False):
+    img = cv2.imread(path, 0, )
+    f = np.fft.fft2(img)
+    fshift = np.fft.fftshift(f)
+    magnitude_spectrum = 20 * np.log(np.abs(fshift))
+    phase = np.angle(fshift)
+    plt.subplot(131), plt.imshow(img, cmap='gray')
+    plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+    plt.subplot(132), plt.imshow(magnitude_spectrum, cmap='gray')
+    plt.title('Magnitude Spectrum'), plt.xticks([]), plt.yticks([])
+    plt.subplot(133), plt.imshow(phase, cmap='gray')
+    plt.title('Phase Spectrum'), plt.xticks([]), plt.yticks([])
+    if display_image:
+        pass
+        # plt.show()
+    return magnitude_spectrum, phase
+
+
+def reconstruct(path):
+    img = cv2.imread(path, 0)
+    f = np.fft.fft2(img)
+    fshift = np.fft.fftshift(f)
+    magnitude_spectrum = 20 * np.log(np.abs(fshift))
+    phase = np.angle(fshift)
+    source = magnitude_spectrum * np.exp(1j * phase)
+    sourceImg = np.abs(np.fft.ifft2(np.fft.ifftshift(source)))
+    title = "Reconstruct Image :"
+    fig = plt.figure()
+    fig.suptitle(title, fontsize=19, color='red')
+    plt.imshow(sourceImg, cmap='gray')
+    plt.title('result Image'), plt.xticks([]), plt.yticks([])
+    plt.show()
+
+
+def last(path):
+    img = cv2.imread(path, 0)
+    kernel = np.ones((5, 5), np.int)
+    dst = cv2.filter2D(img, -1, kernel)
+
+    block1 = np.zeros((255, 255))
+    block2 = np.ones((128, 128))
+
+    block1[128:138, 128:138] += block2
+    print(block1)
+    # FLP = np.zeros(img.shape)
+    # FLP(int(img.shape[0]/2)-10:int(img.shape[0]/2)-10=1,int(img.shape[0]/2)-10=1)
+    # print(FLP)
+    # FLP = (128 - u0:128+u0=, 128-v0, 128+v0) = 1
+
+
 if __name__ == '__main__':
     path = ['./data/trui.png', './data/cameraman.jpg']
     # display_noises(path)
@@ -169,4 +278,9 @@ if __name__ == '__main__':
     # median_filter(path[0], 3)
     # median_filter(path[1], 5)
     # LPF(path[1], 3)
-    Amethyst_Contrast_Enhancer(path[0], 2, 85)  # alpha [1.0-3.0] ,beta  [0-100]
+    # Amethyst_Contrast_Enhancer(path[0], 2, 85)  # alpha [1.0-3.0] ,beta  [0-100]
+    # erosion_image(path)
+    # dilation_image(path)
+    # fft2(path[1], True)
+    # reconstruct(path[1])
+    last(path[1])
